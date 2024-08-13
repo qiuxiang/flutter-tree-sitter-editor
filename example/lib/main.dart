@@ -26,6 +26,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final highlightTheme = solarizedLightTheme;
+  final analyzer = TreeSitterAnalyzer(treeSitterPython);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -34,6 +36,7 @@ class _HomePageState extends State<HomePage> {
       body: SingleChildScrollView(
         child: CodeEditor(
           initialCode: pythonCode,
+          analyzer: analyzer,
           language: treeSitterPython,
           highlightQuery: pythonHighlightQuery,
           theme: highlightTheme,
