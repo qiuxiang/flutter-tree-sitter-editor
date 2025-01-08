@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
 
@@ -34,10 +35,10 @@ class _CodeEditorState extends State<CodeEditor> {
   final text = TextEditingController();
   final parser = TreeSitterParser();
   late final Highlighter highlighter;
-  var tokens = <HighlightSpan>[];
+  final tokens = StreamController<List<HighlightSpan>>();
+  final lines = StreamController<int>();
   TreeSitterTree? tree;
   late TextDocument document;
-  var diagnostics = <Diagnostic>[];
   final diagnosticsMap = <int, List<Diagnostic>>{};
 
   @override
@@ -63,14 +64,15 @@ class _CodeEditorState extends State<CodeEditor> {
   }
 
   void update() {
+    lines.add(text.text.split('\n').length);
     tree?.delete();
     tree = parser.parseString(text.text);
     document = TextDocument(tree!.rootNode, utf8.encode(text.text));
-    widget.analyzer?.analyze(document).then((items) {
-      setState(() {
-        diagnostics = items;
+    widget.analyzer?.analyze(document).then((diagnostics) {
+      if (diagnostics.isNotEmpty) {
+        // setState(() {
         diagnosticsMap.clear();
-        for (final diagnostic in items) {
+        for (final diagnostic in diagnostics) {
           final range = diagnostic.range;
           final line = range.$1.$1;
           if (diagnosticsMap.containsKey(line)) {
@@ -79,19 +81,19 @@ class _CodeEditorState extends State<CodeEditor> {
             diagnosticsMap[line] = [diagnostic];
           }
         }
-      });
+        // });
+      }
     });
-    setState(() {
-      tokens = highlighter.render(
-        document.bytes,
-        highlighter.highlight(tree!.rootNode),
-      );
-    });
+    // setState(() {
+    tokens.add(highlighter.render(
+      document.bytes,
+      highlighter.highlight(tree!.rootNode),
+    ));
+    // });
   }
 
   @override
   Widget build(BuildContext context) {
-    final lines = text.text.split('\n');
     var textStyle = TextStyle(
       fontFamily: 'monospace',
       fontSize: 12,
@@ -109,33 +111,43 @@ class _CodeEditorState extends State<CodeEditor> {
         child: Row(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                for (var i = 0; i < lines.length; i += 1)
-                  Builder(builder: (context) {
-                    Widget? icon;
-                    final diagnostics = diagnosticsMap[i];
-                    if (diagnostics != null) {
-                      icon = Tooltip(
-                        message: diagnostics.map((i) => i.message).join('\n'),
-                        child: Icon(
-                          Icons.error_rounded,
-                          size: textStyle.fontSize! + 2,
-                          color: Colors.red,
-                        ),
-                      );
-                    }
-                    return Row(children: [
-                      Text('${i + 1}', style: textStyle),
-                      Container(
-                        width: 16,
-                        padding: const EdgeInsets.only(left: 4),
-                        child: icon,
+            child: StreamBuilder(
+              stream: lines.stream,
+              builder: (context, snapshot) {
+                final lines = snapshot.data ?? 0;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    for (var i = 0; i < lines; i += 1)
+                      Builder(
+                        key: Key('$i'),
+                        builder: (context) {
+                          Widget? icon;
+                          final diagnostics = diagnosticsMap[i];
+                          if (diagnostics != null) {
+                            icon = Tooltip(
+                              message:
+                                  diagnostics.map((i) => i.message).join('\n'),
+                              child: Icon(
+                                Icons.error_rounded,
+                                size: textStyle.fontSize! + 2,
+                                color: Colors.red,
+                              ),
+                            );
+                          }
+                          return Row(children: [
+                            Text('${i + 1}', style: textStyle),
+                            Container(
+                              width: 16,
+                              padding: const EdgeInsets.only(left: 4),
+                              child: icon,
+                            ),
+                          ]);
+                        },
                       ),
-                    ]);
-                  }),
-              ],
+                  ],
+                );
+              },
             ),
           ),
           Expanded(
@@ -144,22 +156,28 @@ class _CodeEditorState extends State<CodeEditor> {
               child: Stack(children: [
                 Padding(
                   padding: const EdgeInsets.only(right: 4),
-                  child: RichText(
-                    text: TextSpan(style: textStyle, children: [
-                      for (final token in tokens)
-                        TextSpan(
-                          text: token.text,
-                          style: textStyle.merge(widget.theme[token.type]),
-                        ),
-                    ]),
+                  child: StreamBuilder(
+                    stream: tokens.stream,
+                    builder: (context, snapshot) {
+                      final tokens = snapshot.data ?? [];
+                      return RichText(
+                        text: TextSpan(style: textStyle, children: [
+                          for (final token in tokens)
+                            TextSpan(
+                              text: token.text,
+                              style: textStyle.merge(widget.theme[token.type]),
+                            ),
+                        ]),
+                      );
+                    },
                   ),
                 ),
                 Positioned.fill(
                   child: Theme(
                     data: Theme.of(context).copyWith(
                       textSelectionTheme: TextSelectionThemeData(
-                        selectionColor:
-                            widget.theme['comment']?.color?.withOpacity(0.5),
+                        selectionColor: widget.theme['comment']?.color
+                            ?.withValues(alpha: 0.5),
                       ),
                     ),
                     child: TextField(

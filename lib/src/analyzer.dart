@@ -30,13 +30,18 @@ abstract class AbstractAnalyzer {
 
 class TreeSitterAnalyzer implements AbstractAnalyzer {
   final Pointer<TSLanguage> language;
+  final TreeSitterQuery query;
 
-  const TreeSitterAnalyzer(this.language);
+  TreeSitterAnalyzer(this.language)
+      : query = TreeSitterQuery(language, '(ERROR) @error');
+
+  void delete() {
+    query.delete();
+  }
 
   @override
   Future<List<Diagnostic>> analyze(TextDocument document) async {
     final diagnostics = <Diagnostic>[];
-    final query = TreeSitterQuery(language, '(ERROR) @error');
     for (final capture in query.captures(document.node)) {
       final start = capture.node.startPoint;
       final end = capture.node.endPoint;
@@ -50,7 +55,6 @@ class TreeSitterAnalyzer implements AbstractAnalyzer {
         message: message,
       ));
     }
-    query.delete();
     return diagnostics;
   }
 }
