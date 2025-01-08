@@ -11,19 +11,19 @@ import 'package:provider/provider.dart';
 class CodeEditor extends StatefulWidget {
   final String? initialCode;
   final ValueChanged<String>? onChanged;
-  final Pointer<TSLanguage> language;
-  final String highlightQuery;
-  final Map<String, TextStyle> theme;
+  final Pointer<TSLanguage>? language;
+  final String? highlightQuery;
+  final Map<String, TextStyle>? theme;
   final TextStyle? textStyle;
   final AbstractAnalyzer? analyzer;
 
   const CodeEditor({
     super.key,
-    required this.language,
+    this.language,
     this.initialCode,
     this.onChanged,
-    this.theme = const {},
-    this.highlightQuery = '',
+    this.theme,
+    this.highlightQuery,
     this.textStyle,
     this.analyzer,
   });
@@ -34,8 +34,8 @@ class CodeEditor extends StatefulWidget {
 
 class _CodeEditorState extends State<CodeEditor> {
   final code = TextEditingController();
-  final parser = TreeSitterParser();
-  late final Highlighter highlighter;
+  TreeSitterParser? parser;
+  Highlighter? highlighter;
   final tokens = StreamController<List<HighlightSpan>>();
   final lines = StreamController<int>();
   TreeSitterTree? tree;
@@ -45,12 +45,17 @@ class _CodeEditorState extends State<CodeEditor> {
   @override
   void initState() {
     super.initState();
-    parser.setLanguage(widget.language);
+    if (widget.language != null) {
+      parser = TreeSitterParser();
+      parser!.setLanguage(widget.language!);
+      if (widget.highlightQuery != null) {
+        highlighter = Highlighter(
+          widget.language!,
+          highlightQuery: widget.highlightQuery!,
+        );
+      }
+    }
     code.text = widget.initialCode ?? '';
-    highlighter = Highlighter(
-      widget.language,
-      highlightQuery: widget.highlightQuery,
-    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       update();
     });
@@ -59,33 +64,39 @@ class _CodeEditorState extends State<CodeEditor> {
   @override
   void dispose() {
     tree?.delete();
-    parser.delete();
-    highlighter.delete();
+    parser?.delete();
+    highlighter?.delete();
     super.dispose();
   }
 
   void update() {
     lines.add(code.text.split('\n').length);
     tree?.delete();
-    tree = parser.parseString(code.text);
-    document = TextDocument(tree!.rootNode, utf8.encode(code.text));
-    widget.analyzer?.analyze(document).then((diagnostics) {
-      final diagnosticsMap = <int, List<Diagnostic>>{};
-      for (final diagnostic in diagnostics) {
-        final range = diagnostic.range;
-        final line = range.$1.$1;
-        if (diagnosticsMap.containsKey(line)) {
-          diagnosticsMap[line]!.add(diagnostic);
-        } else {
-          diagnosticsMap[line] = [diagnostic];
+    tree = parser?.parseString(code.text);
+    if (tree != null) {
+      document = TextDocument(tree!.rootNode, utf8.encode(code.text));
+      widget.analyzer?.analyze(document).then((diagnostics) {
+        final diagnosticsMap = <int, List<Diagnostic>>{};
+        for (final diagnostic in diagnostics) {
+          final range = diagnostic.range;
+          final line = range.$1.$1;
+          if (diagnosticsMap.containsKey(line)) {
+            diagnosticsMap[line]!.add(diagnostic);
+          } else {
+            diagnosticsMap[line] = [diagnostic];
+          }
         }
-      }
-      this.diagnosticsMap.add(diagnosticsMap);
-    });
-    tokens.add(highlighter.render(
-      document.bytes,
-      highlighter.highlight(tree!.rootNode),
-    ));
+        this.diagnosticsMap.add(diagnosticsMap);
+      });
+    }
+    if (highlighter == null) {
+      tokens.add([HighlightSpan('', code.text)]);
+    } else {
+      tokens.add(highlighter!.render(
+        document.bytes,
+        highlighter!.highlight(tree!.rootNode),
+      ));
+    }
   }
 
   @override
@@ -94,7 +105,7 @@ class _CodeEditorState extends State<CodeEditor> {
       fontFamily: 'monospace',
       fontFamilyFallback: const <String>['cascadia code', 'microsoft yahei'],
       fontSize: 12,
-      color: widget.theme['root']?.color ??
+      color: widget.theme?['root']?.color ??
           Theme.of(context).textTheme.bodyMedium?.color,
       height: 1.5,
       letterSpacing: 0,
@@ -110,7 +121,7 @@ class _CodeEditorState extends State<CodeEditor> {
         ),
       ],
       child: Container(
-        color: widget.theme['root']?.backgroundColor,
+        color: widget.theme?['root']?.backgroundColor,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(children: [
@@ -134,7 +145,7 @@ class _CodeEditorState extends State<CodeEditor> {
                               TextSpan(
                                 text: token.text,
                                 style:
-                                    textStyle.merge(widget.theme[token.type]),
+                                    textStyle.merge(widget.theme?[token.type]),
                               ),
                           ]),
                         );
@@ -145,7 +156,7 @@ class _CodeEditorState extends State<CodeEditor> {
                     child: Theme(
                       data: Theme.of(context).copyWith(
                         textSelectionTheme: TextSelectionThemeData(
-                          selectionColor: widget.theme['comment']?.color
+                          selectionColor: widget.theme?['comment']?.color
                               ?.withValues(alpha: 0.5),
                         ),
                       ),
@@ -153,7 +164,7 @@ class _CodeEditorState extends State<CodeEditor> {
                         controller: code,
                         onChanged: (_) => update(),
                         maxLines: null,
-                        cursorColor: widget.theme['root']?.color,
+                        cursorColor: widget.theme?['root']?.color,
                         keyboardType: TextInputType.multiline,
                         decoration: const InputDecoration(
                           border: InputBorder.none,
