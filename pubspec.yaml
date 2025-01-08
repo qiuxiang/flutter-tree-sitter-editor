@@ -13,6 +13,7 @@ dependencies:
     sdk: flutter
   flutter_tree_sitter:
     path: ../flutter-tree-sitter
+  provider: ^6.1.2
 
 dev_dependencies:
   flutter_test:
