@@ -11,8 +11,7 @@ dependencies:
   ffi: ^2.1.2
   flutter:
     sdk: flutter
-  flutter_tree_sitter:
-    path: ../flutter-tree-sitter
+  flutter_tree_sitter: ^0.0.1
   provider: ^6.1.2
 
 dev_dependencies:

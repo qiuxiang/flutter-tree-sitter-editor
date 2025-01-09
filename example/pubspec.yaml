@@ -37,8 +37,7 @@ dependencies:
   flutter_highlight: ^0.7.0
   flutter_tree_sitter_editor:
     path: ../
-  flutter_tree_sitter_python:
-    path: ../../flutter-tree-sitter-python/
+  flutter_tree_sitter_python: ^0.0.1
 
 dev_dependencies:
   flutter_test:
