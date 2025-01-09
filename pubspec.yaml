@@ -1,7 +1,8 @@
 name: flutter_tree_sitter_editor
-description: "A new Flutter package project."
+description: "A Flutter editor using tree-sitter to provide syntax highlighting and syntactic analysis."
 version: 0.0.1
 homepage: https://github.com/qiuxiang/flutter_tree_sitter_editor
+repository: https://github.com/qiuxiang/flutter_tree_sitter_editor
 
 environment:
   sdk: ">=3.4.4 <4.0.0"
