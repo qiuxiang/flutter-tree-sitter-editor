@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_tree_sitter/flutter_tree_sitter.dart' hide Stack;
@@ -43,6 +44,9 @@ class _CodeEditorState extends State<CodeEditor> {
   TreeSitterTree? tree;
   late TextDocument document;
   final diagnosticsMap = StreamController<Map<int, List<Diagnostic>>>();
+  var textFieldWidth = 0.0;
+  final textPainter = TextPainter(textDirection: TextDirection.ltr);
+  late TextStyle textStyle;
 
   @override
   void initState() {
@@ -51,6 +55,9 @@ class _CodeEditorState extends State<CodeEditor> {
       code = TextEditingController();
     } else {
       code = widget.controller!;
+    }
+    if (widget.initialCode != null) {
+      code.text = widget.initialCode!;
     }
     if (widget.language != null) {
       parser = TreeSitterParser();
@@ -62,7 +69,8 @@ class _CodeEditorState extends State<CodeEditor> {
         );
       }
     }
-    code.text = widget.initialCode ?? '';
+    updateTextStyle();
+    updateTextLayout();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       update();
     });
@@ -74,6 +82,14 @@ class _CodeEditorState extends State<CodeEditor> {
     parser?.delete();
     highlighter?.delete();
     super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant CodeEditor oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.textStyle != widget.textStyle) {
+      updateTextStyle();
+    }
   }
 
   void update() {
@@ -106,9 +122,18 @@ class _CodeEditorState extends State<CodeEditor> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    var textStyle = TextStyle(
+  void updateTextLayout() {
+    setState(() {
+      textPainter.text = TextSpan(
+        text: code.text,
+        style: textStyle,
+      );
+      textPainter.layout();
+    });
+  }
+
+  void updateTextStyle() {
+    textStyle = TextStyle(
       fontFamily: 'monospace',
       fontFamilyFallback: const <String>['cascadia code', 'microsoft yahei'],
       fontSize: 12,
@@ -118,7 +143,10 @@ class _CodeEditorState extends State<CodeEditor> {
       letterSpacing: 0,
     );
     textStyle = textStyle.merge(widget.textStyle);
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         StreamProvider.value(value: lines.stream, initialData: 0),
@@ -137,9 +165,8 @@ class _CodeEditorState extends State<CodeEditor> {
               child: SignColumn(textStyle: textStyle),
             ),
             Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Stack(children: [
+              child: LayoutBuilder(builder: (context, box) {
+                final child = Stack(children: [
                   Padding(
                     padding: const EdgeInsets.only(right: 4),
                     child: StreamBuilder(
@@ -179,13 +206,23 @@ class _CodeEditorState extends State<CodeEditor> {
                         decoration: const InputDecoration(
                           border: InputBorder.none,
                           isDense: true,
+                          contentPadding: EdgeInsets.all(0),
                         ),
                         style: textStyle.copyWith(color: Colors.transparent),
                       ),
                     ),
                   ),
-                ]),
-              ),
+                ]);
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: (textPainter.width + 4) > box.maxWidth
+                        ? null
+                        : box.maxWidth,
+                    child: child,
+                  ),
+                );
+              }),
             ),
           ]),
         ),

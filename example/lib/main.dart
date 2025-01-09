@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_highlight/themes/solarized-light.dart';
 import 'package:flutter_tree_sitter_editor/flutter_tree_sitter_editor.dart';
@@ -8,12 +9,22 @@ void main() {
   runApp(const App());
 }
 
+class ScrollBehavior extends MaterialScrollBehavior {
+  const ScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => PointerDeviceKind.values.toSet();
+}
+
 class App extends StatelessWidget {
   const App({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(home: HomePage());
+    return const MaterialApp(
+      scrollBehavior: ScrollBehavior(),
+      home: HomePage(),
+    );
   }
 }
 
