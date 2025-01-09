@@ -16,10 +16,12 @@ class CodeEditor extends StatefulWidget {
   final Map<String, TextStyle>? theme;
   final TextStyle? textStyle;
   final AbstractAnalyzer? analyzer;
+  final TextEditingController? controller;
 
   const CodeEditor({
     super.key,
     this.language,
+    this.controller,
     this.initialCode,
     this.onChanged,
     this.theme,
@@ -33,7 +35,7 @@ class CodeEditor extends StatefulWidget {
 }
 
 class _CodeEditorState extends State<CodeEditor> {
-  final code = TextEditingController();
+  late TextEditingController code;
   TreeSitterParser? parser;
   Highlighter? highlighter;
   final tokens = StreamController<List<HighlightSpan>>();
@@ -45,6 +47,11 @@ class _CodeEditorState extends State<CodeEditor> {
   @override
   void initState() {
     super.initState();
+    if (widget.controller == null) {
+      code = TextEditingController();
+    } else {
+      code = widget.controller!;
+    }
     if (widget.language != null) {
       parser = TreeSitterParser();
       parser!.setLanguage(widget.language!);
@@ -162,7 +169,10 @@ class _CodeEditorState extends State<CodeEditor> {
                       ),
                       child: TextField(
                         controller: code,
-                        onChanged: (_) => update(),
+                        onChanged: (value) {
+                          update();
+                          widget.onChanged?.call(value);
+                        },
                         maxLines: null,
                         cursorColor: widget.theme?['root']?.color,
                         keyboardType: TextInputType.multiline,
