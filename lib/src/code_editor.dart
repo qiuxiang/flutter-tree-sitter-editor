@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_tree_sitter/flutter_tree_sitter.dart' hide Stack;
@@ -135,7 +134,11 @@ class _CodeEditorState extends State<CodeEditor> {
   void updateTextStyle() {
     textStyle = TextStyle(
       fontFamily: 'monospace',
-      fontFamilyFallback: const <String>['cascadia code', 'microsoft yahei'],
+      fontFamilyFallback: const <String>[
+        'menlo',
+        'cascadia code',
+        'microsoft yahei'
+      ],
       fontSize: 12,
       color: widget.theme?['root']?.color ??
           Theme.of(context).textTheme.bodyMedium?.color,
@@ -147,6 +150,7 @@ class _CodeEditorState extends State<CodeEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final structStyle = StrutStyle.fromTextStyle(textStyle, forceStrutHeight: true);
     return MultiProvider(
       providers: [
         StreamProvider.value(value: lines.stream, initialData: 0),
@@ -174,6 +178,7 @@ class _CodeEditorState extends State<CodeEditor> {
                       builder: (context, snapshot) {
                         final tokens = snapshot.data ?? [];
                         return RichText(
+                          strutStyle: structStyle,
                           text: TextSpan(style: textStyle, children: [
                             for (final token in tokens)
                               TextSpan(
@@ -209,6 +214,7 @@ class _CodeEditorState extends State<CodeEditor> {
                           contentPadding: EdgeInsets.all(0),
                         ),
                         style: textStyle.copyWith(color: Colors.transparent),
+                        strutStyle: structStyle,
                       ),
                     ),
                   ),
