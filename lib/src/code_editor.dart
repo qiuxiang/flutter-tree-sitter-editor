@@ -150,7 +150,8 @@ class _CodeEditorState extends State<CodeEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final structStyle = StrutStyle.fromTextStyle(textStyle, forceStrutHeight: true);
+    final structStyle =
+        StrutStyle.fromTextStyle(textStyle, forceStrutHeight: true);
     return MultiProvider(
       providers: [
         StreamProvider.value(value: lines.stream, initialData: 0),

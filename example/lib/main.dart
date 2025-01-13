@@ -50,11 +50,21 @@ class _HomePageState extends State<HomePage> {
           analyzer: analyzer,
           language: treeSitterPython,
           highlightQuery: pythonHighlightQuery,
-          theme: highlightTheme,
+          theme: toTreeSitterTheme(highlightTheme),
         ),
       ),
     );
   }
+}
+
+Map<String, TextStyle> toTreeSitterTheme(Map highlightTheme) {
+  return {
+    ...highlightTheme,
+    'constant': highlightTheme['variable'],
+    'function': highlightTheme['title'],
+    'function.builtin': highlightTheme['title'],
+    'operator': highlightTheme['built_in'],
+  };
 }
 
 const pythonCode = '''
@@ -67,4 +77,5 @@ factorial = 1
 for i in range(2, n + 1):
     factorial *= i
 
-print(factorial)''';
+print(factorial)
+''';
