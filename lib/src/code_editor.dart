@@ -73,6 +73,9 @@ class _CodeEditorState extends State<CodeEditor> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       update();
     });
+    code.addListener(() {
+      update();
+    });
   }
 
   @override
@@ -203,7 +206,6 @@ class _CodeEditorState extends State<CodeEditor> {
                       child: TextField(
                         controller: code,
                         onChanged: (value) {
-                          update();
                           widget.onChanged?.call(value);
                         },
                         maxLines: null,
